@@ -1,6 +1,6 @@
 // pathfinder/c/src/lib.rs
 //
-// Copyright © 2019 The Pathfinder Project Developers.
+// Copyright 2019 The Pathfinder Project Developers.
 //
 // Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
 // http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
@@ -13,7 +13,7 @@
 use font_kit::handle::Handle;
 use gl;
 use pathfinder_canvas::{Canvas, CanvasFontContext, CanvasRenderingContext2D, FillStyle, LineJoin};
-use pathfinder_canvas::{Path2D, TextAlign, TextBaseline, TextMetrics};
+use pathfinder_canvas::{Path2D, TextAlign, TextMetrics};
 use pathfinder_color::{ColorF, ColorU};
 use pathfinder_content::fill::FillRule;
 use pathfinder_content::outline::ArcDirection;
@@ -67,13 +67,6 @@ pub const PF_TEXT_ALIGN_LEFT:   u8 = 0;
 pub const PF_TEXT_ALIGN_CENTER: u8 = 1;
 pub const PF_TEXT_ALIGN_RIGHT:  u8 = 2;
 
-pub const PF_TEXT_BASELINE_ALPHABETIC:  u8 = 0;
-pub const PF_TEXT_BASELINE_TOP:         u8 = 1;
-pub const PF_TEXT_BASELINE_HANGING:     u8 = 2;
-pub const PF_TEXT_BASELINE_MIDDLE:      u8 = 3;
-pub const PF_TEXT_BASELINE_IDEOGRAPHIC: u8 = 4;
-pub const PF_TEXT_BASELINE_BOTTOM:      u8 = 5;
-
 // `content`
 
 pub const PF_ARC_DIRECTION_CW:  u8 = 0;
@@ -107,7 +100,6 @@ pub type PFLineCap = u8;
 pub type PFLineJoin = u8;
 pub type PFArcDirection = u8;
 pub type PFTextAlign = u8;
-pub type PFTextBaseline = u8;
 #[repr(C)]
 pub struct PFTextMetrics {
     pub width: f32,
@@ -382,7 +374,6 @@ pub unsafe extern "C" fn PFCanvasGetTransform(canvas: PFCanvasRef) -> PFTransfor
 	}	
 }
 
-
 #[no_mangle]
 pub unsafe extern "C" fn PFCanvasResetTransform(canvas: PFCanvasRef) {
     (*canvas).reset_transform();
@@ -440,23 +431,11 @@ pub unsafe extern "C" fn PFCanvasSetTextAlign(canvas: PFCanvasRef, new_text_alig
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn PFCanvasSetTextBaseline(canvas: PFCanvasRef,
-                                                 new_text_baseline: PFTextBaseline) {
-    (*canvas).set_text_baseline(match new_text_baseline {
-        PF_TEXT_BASELINE_ALPHABETIC => TextBaseline::Alphabetic,
-        PF_TEXT_BASELINE_TOP => TextBaseline::Top,
-        PF_TEXT_BASELINE_HANGING => TextBaseline::Hanging,
-        PF_TEXT_BASELINE_MIDDLE => TextBaseline::Middle,
-        PF_TEXT_BASELINE_IDEOGRAPHIC => TextBaseline::Ideographic,
-        _ => TextBaseline::Bottom,
-    });
-}
-
-#[no_mangle]
 pub unsafe extern "C" fn PFCanvasSetFillStyle(canvas: PFCanvasRef, fill_style: PFFillStyleRef) {
     // FIXME(pcwalton): Avoid the copy?
     (*canvas).set_fill_style((*fill_style).clone())
 }
+
 #[no_mangle]
 pub unsafe extern "C" fn PFCanvasSetFillColor(canvas: PFCanvasRef, fill_color: PFColorU) {
     (*canvas).set_fill_style(FillStyle::Color(fill_color.to_rust()))
@@ -468,11 +447,13 @@ pub unsafe extern "C" fn PFCanvasSetStrokeStyle(canvas: PFCanvasRef,
     // FIXME(pcwalton): Avoid the copy?
     (*canvas).set_stroke_style((*stroke_style).clone())
 }
+
 #[no_mangle]
 pub unsafe extern "C" fn PFCanvasSetStrokeColor(canvas: PFCanvasRef,
                                                 stroke_color: PFColorU) {
     (*canvas).set_stroke_style(FillStyle::Color(stroke_color.to_rust()))
 }
+
 
 /// This function automatically destroys the path. If you wish to use the path again, clone it
 /// first.
@@ -577,6 +558,33 @@ pub unsafe extern "C" fn PFFillStyleCreateColor(color: *const PFColorU) -> PFFil
     Box::into_raw(Box::new(FillStyle::Color((*color).to_rust())))
 }
 
+/*
+#[no_mangle]
+pub unsafe extern "C" fn PFFillStyleCreateGradientLinear(from: *const PFVector2F, to: *const PFVector2F) -> PFFillStyleRef {
+    Box::into_raw(Box::new(FillStyle::Gradient(
+        Gradient::linear_from_points((*from).to_rust(), (*to).to_rust())
+    )))
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn PFFillStyleCreateGradientRadial(from: *const PFVector2F, to: *const PFVector2F, radii: *const PFVector2F) -> PFFillStyleRef {
+    Box::into_raw(Box::new(FillStyle::Gradient(
+        Gradient::radial(
+            LineSegment2F::new((*from).to_rust(), (*to).to_rust()),
+            F32x2::new((*radii).x, (*radii).y)
+            )
+    )))
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn PFFillStyleGradientAddStop(gradient: PFFillStyleRef, color: PFColorU, offset: f32) {
+    match &mut(*gradient) {
+        FillStyle::Gradient(grad) => grad.add_color_stop(color.to_rust(), offset),
+        _ => panic!("The PFFillStyleRef passed into PFFillStyleGradientAddStop is not a gradient!"),
+    }
+}
+*/
+
 #[no_mangle]
 pub unsafe extern "C" fn PFFillStyleDestroy(fill_style: PFFillStyleRef) {
     drop(Box::from_raw(fill_style))
@@ -645,6 +653,20 @@ pub unsafe extern "C" fn PFGLDestFramebufferCreateFullWindow(window_size: *const
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn PFGLDestFramebufferCreate(window_size: *const PFVector2I, viewport_position: *const PFVector2I, viewport_size: *const PFVector2I)
+                                                             -> PFGLDestFramebufferRef {
+    Box::into_raw(Box::new(
+        DestFramebuffer::Default{
+			viewport: RectI::new(
+			(*viewport_size).to_rust(), 
+			(*viewport_position).to_rust()),
+			
+			window_size: (*window_size).to_rust()
+		}
+	))
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn PFGLDestFramebufferDestroy(dest_framebuffer: PFGLDestFramebufferRef) {
     drop(Box::from_raw(dest_framebuffer))
 }
@@ -662,6 +684,17 @@ pub unsafe extern "C" fn PFGLRendererCreate(device: PFGLDeviceRef,
                                          &*((*resources).0),
                                          (*mode).to_rust(),
                                          (*options).to_rust())))
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn PFGLRendererReplaceDestFramebuffer(renderer: PFGLRendererRef, window_size: *const PFVector2I, viewport_position: *const PFVector2I, viewport_size: *const PFVector2I) {
+    (*renderer).options_mut().dest = 
+        DestFramebuffer::Default{
+		viewport: RectI::new((*viewport_position).to_rust(), (*viewport_size).to_rust()),
+		window_size: (*window_size).to_rust(),
+		};
+		
+	(*renderer).dest_framebuffer_size_changed();
 }
 
 #[no_mangle]
@@ -818,6 +851,16 @@ pub unsafe extern "C" fn PFBuildOptionsDestroy(options: PFBuildOptionsRef) {
 pub unsafe extern "C" fn PFBuildOptionsSetTransform(options: PFBuildOptionsRef,
                                                     transform: PFRenderTransformRef) {
     (*options).transform = *Box::from_raw(transform)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn PFBuildOptionsSetTransform2D(options: PFBuildOptionsRef, transform: *const PFTransform2F) {
+    (*options).transform = RenderTransform::Transform2D((*transform).to_rust());
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn PFBuildOptionsSetTransformPerspective(options: PFBuildOptionsRef, transform: *const PFPerspective) {
+    (*options).transform = RenderTransform::Perspective((*transform).to_rust());
 }
 
 #[no_mangle]
