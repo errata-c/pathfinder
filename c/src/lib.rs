@@ -367,6 +367,23 @@ pub unsafe extern "C" fn PFCanvasSetTransform(canvas: PFCanvasRef,
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn PFCanvasGetTransform(canvas: PFCanvasRef) -> PFTransform2F {
+	PFTransform2F{
+		matrix: PFMatrix2x2F{
+			m00: (*canvas).transform().matrix.m11(),
+			m01: (*canvas).transform().matrix.m12(),
+			m10: (*canvas).transform().matrix.m21(),
+			m11: (*canvas).transform().matrix.m22(),
+		},
+		vector: PFVector2F{
+			x: (*canvas).transform().vector.x(),
+			y: (*canvas).transform().vector.y(),
+		},
+	}	
+}
+
+
+#[no_mangle]
 pub unsafe extern "C" fn PFCanvasResetTransform(canvas: PFCanvasRef) {
     (*canvas).reset_transform();
 }
