@@ -235,6 +235,11 @@ impl CanvasFontContext {
             .load()
             .expect("Failed to load the font!")
     }
+	
+	// BG
+    pub fn font_source(&self) -> Arc<dyn Source>  {
+		self.0.borrow().font_source.clone()
+	}
 }
 
 // Text layout utilities

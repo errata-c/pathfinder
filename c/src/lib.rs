@@ -255,6 +255,18 @@ pub unsafe extern "C" fn PFCanvasFontContextCreateWithFonts(fonts: *const FKHand
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn PFCanvasFontContextPrintFonts(font_context: PFCanvasFontContextRef) {
+    let font_source = (*Box::from_raw(font_context)).font_source();
+    let handles = font_source.all_fonts().expect("Failed to select all fonts");
+    for handle in handles {
+        let font = handle.load().expect("Failed to load font from handle");
+        let ps_name = font.postscript_name().expect("Failed to get postscript name");
+
+        println!("{:<32}, {:<32}", font.full_name(), ps_name);
+    }
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn PFCanvasFontContextAddRef(font_context: PFCanvasFontContextRef)
                                                    -> PFCanvasFontContextRef {
     Box::into_raw(Box::new((*font_context).clone()))
@@ -360,6 +372,21 @@ pub unsafe extern "C" fn PFCanvasResetTransform(canvas: PFCanvasRef) {
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn PFCanvasRotate(canvas: PFCanvasRef, angle: f32) {
+    (*canvas).rotate(angle);
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn PFCanvasScale(canvas: PFCanvasRef, x_scale: f32, y_scale: f32) {
+    (*canvas).scale(Vector2F::new(x_scale, y_scale));
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn PFCanvasTranslate(canvas: PFCanvasRef, x_offset: f32, y_offset: f32) {
+    (*canvas).translate(Vector2F::new(x_offset, y_offset));
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn PFCanvasSave(canvas: PFCanvasRef) {
     (*canvas).save();
 }
@@ -413,12 +440,21 @@ pub unsafe extern "C" fn PFCanvasSetFillStyle(canvas: PFCanvasRef, fill_style: P
     // FIXME(pcwalton): Avoid the copy?
     (*canvas).set_fill_style((*fill_style).clone())
 }
+#[no_mangle]
+pub unsafe extern "C" fn PFCanvasSetFillColor(canvas: PFCanvasRef, fill_color: PFColorU) {
+    (*canvas).set_fill_style(FillStyle::Color(fill_color.to_rust()))
+}
 
 #[no_mangle]
 pub unsafe extern "C" fn PFCanvasSetStrokeStyle(canvas: PFCanvasRef,
                                                 stroke_style: PFFillStyleRef) {
     // FIXME(pcwalton): Avoid the copy?
     (*canvas).set_stroke_style((*stroke_style).clone())
+}
+#[no_mangle]
+pub unsafe extern "C" fn PFCanvasSetStrokeColor(canvas: PFCanvasRef,
+                                                stroke_color: PFColorU) {
+    (*canvas).set_stroke_style(FillStyle::Color(stroke_color.to_rust()))
 }
 
 /// This function automatically destroys the path. If you wish to use the path again, clone it
