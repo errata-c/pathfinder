@@ -37,7 +37,8 @@ version = "0.5"
 optional = true
 
 [dependencies.skribo]
-version = "0.1"
+git = "https://github.com/errata-c/skribo.git"
+rev = "496b5e91e3e4b8556f0fe8bb6413e898438b4b9d" 
 optional = true
 
 [features]
