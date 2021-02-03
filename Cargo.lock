@@ -294,6 +294,7 @@ version = "0.1.0"
 dependencies = [
  "euclid",
  "gl",
+ "glutin",
  "pathfinder_canvas",
  "pathfinder_color",
  "pathfinder_content",
@@ -302,8 +303,6 @@ dependencies = [
  "pathfinder_gpu",
  "pathfinder_renderer",
  "pathfinder_resources",
- "surfman",
- "winit 0.19.3",
 ]
 
 [[package]]
@@ -2799,7 +2798,7 @@ checksum = "0b8de496cf83d4ed58b6be86c3a275b8602f6ffe98d3024a869e124147a9a3ac"
 [[package]]
 name = "skribo"
 version = "0.1.0"
-source = "git+https://github.com/errata-c/skribo.git?rev=496b5e91e3e4b8556f0fe8bb6413e898438b4b9d#496b5e91e3e4b8556f0fe8bb6413e898438b4b9d"
+source = "git+https://github.com/errata-c/skribo.git?rev=ca5dec4a08c7ebe61a5144e52b4329d61c5c6be2#ca5dec4a08c7ebe61a5144e52b4329d61c5c6be2"
 dependencies = [
  "font-kit",
  "harfbuzz",

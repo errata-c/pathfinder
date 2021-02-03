@@ -8,7 +8,12 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use euclid::default::Size2D;
+use glutin::dpi::{PhysicalSize, LogicalSize};
+use glutin::{ContextBuilder, GlProfile, GlRequest};
+use glutin::event_loop::{ControlFlow, EventLoop};
+use glutin::event::{Event, KeyboardInput, VirtualKeyCode, WindowEvent};
+use glutin::window::WindowBuilder;
+
 use pathfinder_canvas::{Canvas, CanvasFontContext, CanvasRenderingContext2D, FillStyle, Path2D};
 use pathfinder_color::{ColorF, ColorU};
 use pathfinder_geometry::vector::{Vector2F, Vector2I, vec2f, vec2i};
@@ -21,10 +26,8 @@ use pathfinder_renderer::options::BuildOptions;
 use pathfinder_resources::embedded::EmbeddedResourceLoader;
 use std::f32::consts::PI;
 use std::f32;
-use surfman::{Connection, ContextAttributeFlags, ContextAttributes, GLVersion as SurfmanGLVersion};
-use surfman::{SurfaceAccess, SurfaceType};
-use winit::dpi::LogicalSize;
-use winit::{Event, EventsLoop, WindowBuilder, WindowEvent};
+
+
 
 const VELOCITY: f32 = 0.02;
 const OUTER_RADIUS: f32 = 64.0;
@@ -40,79 +43,68 @@ const COLOR_CYCLE_SPEED: f32 = 0.0025;
 
 fn main() {
     // Open a window.
-    let mut event_loop = EventsLoop::new();
-    let window_size = Size2D::new(1067, 800);
-    let logical_size = LogicalSize::new(window_size.width as f64, window_size.height as f64);
-    let window = WindowBuilder::new().with_title("Moire example")
-                                     .with_dimensions(logical_size)
-                                     .build(&event_loop)
-                                     .unwrap();
-    window.show();
+    let event_loop = EventLoop::new();
+    let window_size = vec2i(1067, 800);
+    let physical_window_size = PhysicalSize::new(window_size.x() as f64, window_size.y() as f64);
+    let logical_size = LogicalSize::new(window_size.x() as f64, window_size.y() as f64);
 
-    // Create a `surfman` device. On a multi-GPU system, we'll request the low-power integrated
-    // GPU.
-    let connection = Connection::from_winit_window(&window).unwrap();
-    let native_widget = connection.create_native_widget_from_winit_window(&window).unwrap();
-    let adapter = connection.create_low_power_adapter().unwrap();
-    let mut device = connection.create_device(&adapter).unwrap();
+    // Open a window.
+    let window_builder = 
+        WindowBuilder::new().with_title("Moire example")
+        .with_inner_size(physical_window_size);
 
-    // Request an OpenGL 3.x context. Pathfinder requires this.
-    let context_attributes = ContextAttributes {
-        version: SurfmanGLVersion::new(3, 0),
-        flags: ContextAttributeFlags::ALPHA,
-    };
-    let context_descriptor = device.create_context_descriptor(&context_attributes).unwrap();
+    // Create an OpenGL 3.x context for Pathfinder to use.
+    let windowed_context = ContextBuilder::new().with_gl(GlRequest::Latest)
+                                          .with_gl_profile(GlProfile::Core)
+                                          .build_windowed(window_builder, &event_loop)
+                                          .unwrap();
 
-    // Make the OpenGL context via `surfman`, and load OpenGL functions.
-    let surface_type = SurfaceType::Widget { native_widget };
-    let mut gl_context = device.create_context(&context_descriptor).unwrap();
-    let surface = device.create_surface(&gl_context, SurfaceAccess::GPUOnly, surface_type)
-                        .unwrap();
-    device.bind_surface_to_context(&mut gl_context, surface).unwrap();
-    device.make_context_current(&gl_context).unwrap();
-    gl::load_with(|symbol_name| device.get_proc_address(&gl_context, symbol_name));
+    // Load OpenGL, and make the context current.
+    let gl_context = unsafe { windowed_context.make_current().unwrap() };
+    gl::load_with(|name| gl_context.get_proc_address(name) as *const _);
 
     // Get the real size of the window, taking HiDPI into account.
-    let hidpi_factor = window.get_current_monitor().get_hidpi_factor();
-    let physical_size = logical_size.to_physical(hidpi_factor);
+    let hidpi_factor: f64 = 1.0;// window.hidpi_factor();
+    let physical_size: PhysicalSize<f64> = logical_size.to_physical(hidpi_factor);
     let framebuffer_size = vec2i(physical_size.width as i32, physical_size.height as i32);
 
-    // Create a Pathfinder GL device.
-    let default_framebuffer = device.context_surface_info(&gl_context)
-                                    .unwrap()
-                                    .unwrap()
-                                    .framebuffer_object;
-    let pathfinder_device = GLDevice::new(GLVersion::GL3, default_framebuffer);
-
-    // Create our renderers.
-    let mode = RendererMode::default_for_device(&pathfinder_device);
+    // Create a Pathfinder renderer.
+    let device = GLDevice::new(GLVersion::GL3, 0);
+    let mode = RendererMode::default_for_device(&device);
     let options = RendererOptions {
         background_color: Some(ColorF::white()),
-        dest: DestFramebuffer::full_window(framebuffer_size),
+        dest: DestFramebuffer::full_window(window_size),
         ..RendererOptions::default()
     };
-    let renderer = Renderer::new(pathfinder_device, &EmbeddedResourceLoader, mode, options);
-    let window_size = vec2i(window_size.width, window_size.height);
+    let renderer = Renderer::new(device, &EmbeddedResourceLoader, mode, options);
+
     let mut moire_renderer = MoireRenderer::new(renderer, window_size, framebuffer_size);
 
-    // Enter main render loop.
-    let mut exit = false;
-    while !exit {
-        moire_renderer.render();
+    // Wait for a keypress.
+    event_loop.run(move |event, _, control_flow| {
+        match event {
+            Event::MainEventsCleared => {
+                moire_renderer.render();
 
-        // Present the rendered canvas via `surfman`.
-        let mut surface = device.unbind_surface_from_context(&mut gl_context).unwrap().unwrap();
-        device.present_surface(&mut gl_context, &mut surface).unwrap();
-        device.bind_surface_to_context(&mut gl_context, surface).unwrap();
+                gl_context.swap_buffers().unwrap();
 
-        event_loop.poll_events(|event| {
-            match event {
-                Event::WindowEvent { event: WindowEvent::CloseRequested, .. } |
-                Event::WindowEvent { event: WindowEvent::KeyboardInput { .. }, .. } => exit = true,
-                _ => {}
-            }
-        });
-    }
+                gl_context.window().request_redraw();
+            },
+            Event::WindowEvent { event: WindowEvent::CloseRequested, .. } |
+            Event::WindowEvent {
+                event: WindowEvent::KeyboardInput {
+                    input: KeyboardInput { virtual_keycode: Some(VirtualKeyCode::Escape), .. },
+                    ..
+                },
+                ..
+            } => {
+                *control_flow = ControlFlow::Exit;
+            },
+            _ => {
+                *control_flow = ControlFlow::Poll;
+            },
+        };
+    })
 }
 
 struct MoireRenderer {

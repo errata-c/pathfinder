@@ -15,6 +15,7 @@ use glutin::{ContextBuilder, GlProfile, GlRequest};
 use glutin::event_loop::{ControlFlow, EventLoop};
 use glutin::event::{Event, KeyboardInput, VirtualKeyCode, WindowEvent};
 use glutin::window::WindowBuilder;
+
 use pathfinder_canvas::{Canvas, CanvasFontContext, Path2D};
 use pathfinder_color::ColorF;
 use pathfinder_geometry::rect::RectF;
