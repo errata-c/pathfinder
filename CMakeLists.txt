@@ -34,38 +34,23 @@ install(FILES
 	"${PATHFINDER_RELEASE_ROOT}/pathfinder.dll"
 	"${PATHFINDER_RELEASE_ROOT}/pathfinder.dll.exp"
 	"${PATHFINDER_RELEASE_ROOT}/pathfinder.pdb"
-	DESTINATION
-	"bin"
+	DESTINATION "bin/release"
 )
 install(FILES
 	"${PATHFINDER_RELEASE_ROOT}/pathfinder.dll.lib"
-	DESTINATION
-	"lib"
+	DESTINATION "lib/release"
 )
 
 install(FILES
 	"${PATHFINDER_DEBUG_ROOT}/pathfinder.dll"
-	DESTINATION
-	"bin"
-	RENAME "pathfinderd.dll"
-)
-install(FILES
 	"${PATHFINDER_DEBUG_ROOT}/pathfinder.dll.exp"
-	DESTINATION
-	"bin"
-	RENAME "pathfinderd.dll.exp"
-)
-install(FILES
 	"${PATHFINDER_DEBUG_ROOT}/pathfinder.pdb"
-	DESTINATION
-	"bin"
-	RENAME "pathfinderd.pdb"
+	DESTINATION "bin/debug"
 )
+
 install(FILES
 	"${PATHFINDER_DEBUG_ROOT}/pathfinder.dll.lib"
-	DESTINATION
-	"lib"
-	RENAME "pathfinderd.dll.lib"
+	DESTINATION "lib/debug"
 )
 
 install(DIRECTORY
@@ -73,13 +58,11 @@ install(DIRECTORY
 	"${CMAKE_CURRENT_SOURCE_DIR}/resources/fonts"
 	"${CMAKE_CURRENT_SOURCE_DIR}/resources/shaders"
 	"${CMAKE_CURRENT_SOURCE_DIR}/resources/textures"
-	DESTINATION
-	"share/resources"
+	DESTINATION "share/resources"
 )
 install(FILES
 	"${CMAKE_CURRENT_SOURCE_DIR}/resources/MANIFEST"
-	DESTINATION
-	"share/resources"
+	DESTINATION "share/resources"
 )
 
 install(FILES
