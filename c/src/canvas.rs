@@ -35,8 +35,8 @@ pub const PF_TEXT_ALIGN_RIGHT:  u8 = 2;
 
 // `canvas`
 
-/// This function internally adds a reference to the font context. Therefore, if you created the
-/// font context, you must release it yourself to avoid a leak.
+/// Creates a canvas using the existing font context. Does not take ownership of the context, 
+/// only references it.
 #[no_mangle]
 pub unsafe extern "C" fn PFCanvasCreate(font_context: PFCanvasFontContextRef,
                                         size: *const PFVector2F)
@@ -44,11 +44,14 @@ pub unsafe extern "C" fn PFCanvasCreate(font_context: PFCanvasFontContextRef,
     Box::into_raw(Box::new(Canvas::new((*size).to_rust()).get_context_2d((*font_context).clone())))
 }
 
+/// Destroys the canvas, releasing its reference to the font context it was created with. Note
+/// that you must still release the initial reference to the font context to free its resources.
 #[no_mangle]
 pub unsafe extern "C" fn PFCanvasDestroy(canvas: PFCanvasRef) {
     drop(Box::from_raw(canvas))
 }
 
+/// Creates a reference counted font context, using the system as the source for the fonts.
 #[no_mangle]
 pub unsafe extern "C" fn PFCanvasFontContextCreateWithSystemSource() -> PFCanvasFontContextRef {
     Box::into_raw(Box::new(CanvasFontContext::from_system_source()))
@@ -80,12 +83,14 @@ pub unsafe extern "C" fn PFCanvasFontContextPrintFonts(font_context: PFCanvasFon
     }
 }
 
+/// Adds a reference to the reference count on the font context.
 #[no_mangle]
 pub unsafe extern "C" fn PFCanvasFontContextAddRef(font_context: PFCanvasFontContextRef)
                                                    -> PFCanvasFontContextRef {
     Box::into_raw(Box::new((*font_context).clone()))
 }
 
+/// Removes a reference from the font context, will destroy the context if no more references exist.
 #[no_mangle]
 pub unsafe extern "C" fn PFCanvasFontContextRelease(font_context: PFCanvasFontContextRef) {
     drop(Box::from_raw(font_context))
@@ -111,6 +116,7 @@ pub unsafe extern "C" fn PFCanvasStrokeRect(canvas: PFCanvasRef, rect: *const PF
 }
 
 // Drawing text
+// These seem to be the slowest parts of the api, using the most compute time when profiled.
 
 #[no_mangle]
 pub unsafe extern "C" fn PFCanvasFillText(canvas: PFCanvasRef,
@@ -231,6 +237,8 @@ pub unsafe extern "C" fn PFCanvasSetLineDashOffset(canvas: PFCanvasRef, new_offs
     (*canvas).set_line_dash_offset(new_offset)
 }
 
+/// Attempts to find a font by the name provided. Note that this expects the font to exist and
+/// failure to find it will crash.
 #[no_mangle]
 pub unsafe extern "C" fn PFCanvasSetFontByPostScriptName(canvas: PFCanvasRef,
                                                          postscript_name: *const c_char,
@@ -253,24 +261,29 @@ pub unsafe extern "C" fn PFCanvasSetTextAlign(canvas: PFCanvasRef, new_text_alig
     });
 }
 
+/// Takes ownership of the PFFillStyle passed in, clone the fill style prior to calling this if you
+/// wish to reuse it.
 #[no_mangle]
 pub unsafe extern "C" fn PFCanvasSetFillStyle(canvas: PFCanvasRef, fill_style: PFFillStyleRef) {
-    // FIXME(pcwalton): Avoid the copy?
-    (*canvas).set_fill_style((*fill_style).clone())
+    (*canvas).set_fill_style(*Box::from_raw(fill_style))
 }
 
+/// Convenience function to avoid PFFillStyle dynamic allocation overhead.
 #[no_mangle]
 pub unsafe extern "C" fn PFCanvasSetFillColor(canvas: PFCanvasRef, fill_color: PFColorU) {
     (*canvas).set_fill_style(FillStyle::Color(fill_color.to_rust()))
 }
 
+/// Takes ownership of the PFFillStyle passed in, clone the fill style prior to calling this if you
+/// wish to reuse it.
 #[no_mangle]
 pub unsafe extern "C" fn PFCanvasSetStrokeStyle(canvas: PFCanvasRef,
                                                 stroke_style: PFFillStyleRef) {
-    // FIXME(pcwalton): Avoid the copy?
-    (*canvas).set_stroke_style((*stroke_style).clone())
+    (*canvas).set_stroke_style(*Box::from_raw(stroke_style))
 }
 
+
+/// Convenience function to avoid PFFillStyle dynamic allocation overhead.
 #[no_mangle]
 pub unsafe extern "C" fn PFCanvasSetStrokeColor(canvas: PFCanvasRef,
                                                 stroke_color: PFColorU) {
@@ -293,20 +306,25 @@ pub unsafe extern "C" fn PFCanvasStrokePath(canvas: PFCanvasRef, path: PFPathRef
     (*canvas).stroke_path(*Box::from_raw(path))
 }
 
+
+// shadows
+
 #[no_mangle]
 pub unsafe extern "C" fn PFCanvasSetShadowBlur(canvas: PFCanvasRef, blur: f32) {
     (*canvas).set_shadow_blur(blur);
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn PFCanvasSetShadowColor(canvas: PFCanvasRef, col: ColorU) {
-    (*canvas).set_shadow_color(col);
+pub unsafe extern "C" fn PFCanvasSetShadowOffset(canvas: PFCanvasRef, x_offset: f32, y_offset: f32) {
+    (*canvas).set_shadow_offset(Vector2F::new(x_offset, y_offset));
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn PFCanvasSetShadowBlur(canvas: PFCanvasRef, x_offset: f32, y_offset: f32) {
-    (*canvas).set_shadow_offset(Vector2F::new(x_offset, y_offset));
+pub unsafe extern "C" fn PFCanvasSetShadowColor(canvas: PFCanvasRef, col: PFColorU) {
+    (*canvas).set_shadow_color(col.to_rust());
 }
+
+
 
 
 // Helpers

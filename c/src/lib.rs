@@ -62,7 +62,11 @@ pub type FKHandleRef = *mut Handle;
 pub type PFCanvasRef = *mut CanvasRenderingContext2D;
 pub type PFPathRef = *mut Path2D;
 pub type PFCanvasFontContextRef = *mut CanvasFontContext;
+
+// Fillstyle has some complexity to it, so working by reference is the better way.
+// If you only want to use simple color fills, alternative functions will be provided to avoid the overhead.
 pub type PFFillStyleRef = *mut FillStyle;
+
 pub type PFLineCap = u8;
 pub type PFLineJoin = u8;
 pub type PFArcDirection = u8;
