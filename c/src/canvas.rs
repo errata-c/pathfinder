@@ -293,6 +293,22 @@ pub unsafe extern "C" fn PFCanvasStrokePath(canvas: PFCanvasRef, path: PFPathRef
     (*canvas).stroke_path(*Box::from_raw(path))
 }
 
+#[no_mangle]
+pub unsafe extern "C" fn PFCanvasSetShadowBlur(canvas: PFCanvasRef, blur: f32) {
+    (*canvas).set_shadow_blur(blur);
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn PFCanvasSetShadowColor(canvas: PFCanvasRef, col: ColorU) {
+    (*canvas).set_shadow_color(col);
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn PFCanvasSetShadowBlur(canvas: PFCanvasRef, x_offset: f32, y_offset: f32) {
+    (*canvas).set_shadow_offset(Vector2F::new(x_offset, y_offset));
+}
+
+
 // Helpers
 unsafe fn to_rust_string(ptr: &*const c_char, mut len: usize) -> &str {
     if len == 0 {
